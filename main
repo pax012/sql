@@ -1,0 +1,249 @@
+-------------------- 1 feladat --------------------
+SELECT ugyfel_id, vezeteknev, keresztnev, megrendeles_id FROM s_ugyfel u
+FULL OUTER JOIN s_megrendeles m ON u.ugyfel_id = m.ugyfel
+ORDER BY vezeteknev, keresztnev, megrendeles_id;
+
+-------------------- 2 feladat --------------------
+SELECT ht.nev típusnév, h.nev hajónév FROM s_hajo h
+RIGHT JOIN s_hajo_tipus ht ON h.hajo_tipus = ht.hajo_tipus_id
+ORDER BY ht.nev, h.nev;
+
+-------------------- 5 feladat --------------------
+SELECT o.orszag, o.lakossag, nvl(h.helysegnev, 'nem simert') FROM s_orszag o
+LEFT JOIN hajo.s_helyseg h ON o.fovaros = h.helyseg_id
+WHERE o.lakossag < (SELECT lakossag FROM hajo.s_orszag WHERE orszag = 'Magyarország')
+ORDER BY o.lakossag DESC;
+
+-------------------- 7 feladat --------------------
+SELECT hajo_id, nev FROM s_hajo
+WHERE hajo_id not in
+(SELECT hajo FROM s_ut WHERE erkezesi_kikoto LIKE 'Fra%');
+
+
+SELECT * FROM s_ut;
+-------------------- 8 feladat --------------------
+select distinct helyseg_id, orszag, helysegnev from s_helyseg
+where helyseg_id in
+(select helyseg from hajo.s_kikoto where kikoto_id in
+(select indulasi_kikoto from hajo.s_ut where hajo in
+(select hajo_id from hajo.s_hajo where nev='SC Bella')));
+
+-------------------- 9 feladat --------------------
+SELECT megrendeles_id, fizetett_osszeg FROM s_megrendeles
+WHERE fizetett_osszeg >
+(SELECT MAX(fizetett_osszeg) FROM s_megrendeles WHERE to_char(megrendeles_datuma, 'YYYY.MM') = ('2022.04'));
+
+-------------------- 11 feladat --------------------
+SELECT h.nev, max_sulyterheles, ht.nev FROM s_hajo h
+LEFT OUTER JOIN s_hajo_tipus ht ON h.hajo_tipus = ht.hajo_tipus_id
+WHERE h.hajo_id NOT IN (SELECT hajo FROM hajo.s_ut);
+
+-------------------- 12 feladat --------------------
+SELECT DISTINCT vezeteknev, keresztnev, h.orszag FROM s_ugyfel u
+LEFT JOIN s_helyseg h ON u.helyseg = h.helyseg_id
+INNER JOIN s_megrendeles m ON u.ugyfel_id = m.ugyfel
+WHERE fizetett_osszeg <= 1000000
+ORDER BY vezeteknev, keresztnev;
+
+-------------------- 13 feladat --------------------
+SELECT kikoto_id FROM hajo.s_kikoto
+WHERE kikoto_id IN (select indulasi_kikoto from hajo.s_ut where erkezesi_kikoto = 'It_Cat')
+OR
+kikoto_id IN (select erkezesi_kikoto from hajo.s_ut where indulasi_kikoto = 'It_Cat')
+ORDER BY kikoto_id ASC;
+
+-------------------- 19 feladat --------------------
+SELECT
+    megrendeles_id
+FROM
+    hajo.s_megrendeles m
+    INNER JOIN hajo.s_ugyfel         u ON m.ugyfel = u.ugyfel_id
+    INNER JOIN hajo.s_hozzarendel    h ON m.megrendeles_id = h.megrendeles
+    INNER JOIN hajo.s_szallit        s ON s.megrendeles = h.megrendeles
+    INNER JOIN hajo.s_ut             ut ON ut.ut_id = s.ut
+WHERE
+    m.fizetett_osszeg >= 2000000
+    AND u.keresztnev = 'Yiorgos'
+    AND sysdate < ut.erkezesi_ido;
+
+-------------------- 20 feladat --------------------
+SELECT h.helyseg_id, h.orszag, h.helysegnev FROM s_helyseg h
+LEFT JOIN s_ugyfel u ON h.helyseg_id = u.helyseg
+WHERE h.lakossag > 1000000 OR EXTRACT(YEAR FROM SYSDATE) - EXTRACT(YEAR FROM u.szul_dat) > 50
+GROUP BY h.helyseg_id, h.orszag, h.helysegnev
+ORDER BY h.orszag, h.helysegnev;
+
+-------------------- 25 feladat --------------------
+SELECT vezeteknev, keresztnev, megrendeles_id, igenyelt_kontenerszam FROM s_megrendeles m
+INNER JOIN s_ugyfel u ON m.ugyfel = u.ugyfel_id
+ORDER BY igenyelt_kontenerszam DESC
+FETCH FIRST 10 ROWS ONLY;
+
+
+SELECT * FROM s_hozzarendel;
+-------------------- 27 feladat --------------------
+SELECT h.nev, count(u.hajo) Utakszáma FROM s_ut u
+INNER JOIN s_hajo h ON u.hajo = h.hajo_id
+GROUP BY h.nev
+ORDER BY count(u.hajo) DESC
+FETCH FIRST 3 ROWS WITH TIES;
+
+-------------------- 31 feladat --------------------
+CREATE TABLE s_szemelyzet2 (
+    azonosito varchar2(10),
+    vezetknev varchar2(50),
+    keresztnev varchar2(50),
+    szul_datum DATE,
+    telefonszam number(20) NOT NULL,
+    hajo_id varchar2(10),
+    CONSTRAINT pk_s_szemelyzet2 PRIMARY KEY (azonosito),
+    CONSTRAINT fk_s_szemelyzet2 FOREIGN KEY (hajo_id) REFERENCES s_hajo (hajo_id)
+);
+
+DROP TABLE s_szemelyzet2;
+-------------------- 32 feladat --------------------
+CREATE TABLE s_szemelyzet (
+    azonosito NUMBER(5) PRIMARY KEY,
+    vezeteknev VARCHAR2(40) NOT NULL,
+    keresztnev VARCHAR2(40) NOT NULL,
+    szuletesi_datum DATE,
+    email VARCHAR2(200),
+    hajo_id VARCHAR2(10) NOT NULL,
+    CONSTRAINT fk_hajo FOREIGN KEY (hajo_id) REFERENCES s_hajo (hajo_id),
+    CONSTRAINT uq_szemelyzet UNIQUE (vezeteknev, keresztnev, szuletesi_datum)
+);
+
+DROP TABLE s_szemelyzet;
+-------------------- 33 feladat --------------------
+CREATE TABLE s_kikoto_email (
+    kikoto_id varchar2(10),
+    email_cim varchar2(200),
+    CONSTRAINT pk_s_kikoto_email PRIMARY KEY (kikoto_id, email_cim),
+    CONSTRAINT fk_s_kikoto_email_kikoto_id FOREIGN KEY (kikoto_id) REFERENCES s_kikoto (kikoto_id)
+);
+
+DROP TABLE s_kikoto_email;
+-------------------- 35 feladat --------------------
+CREATE TABLE s_hajo_javitas (
+    hajo_id VARCHAR2(10) NOT NULL,
+    javitas_kezdete DATE NOT NULL,
+    javitas_vege DATE,
+    javitas_ara NUMBER(10, 2),
+    hiba_leirasa VARCHAR2(200),
+    CONSTRAINT pk_s_hajo_javitas PRIMARY KEY (hajo_id, javitas_kezdete),
+    CONSTRAINT fk_s_hajo_javitas_hajo_id FOREIGN KEY (hajo_id) REFERENCES s_hajo (hajo_id),
+    CONSTRAINT chk_javitas_vege CHECK (javitas_vege IS NULL OR javitas_vege > javitas_kezdete)
+);
+
+DROP TABLE s_hajo_javitas;
+-------------------- 49 feladat --------------------
+ALTER TABLE s_kikoto_telefon
+ADD email VARCHAR2(200) DEFAULT 'nem ismert';
+
+-------------------- 50 feladat --------------------
+ALTER TABLE s_ugyfel MODIFY (email VARCHAR2(50), utca_hsz VARCHAR2(100));
+
+-------------------- 53 feladat --------------------
+INSERT INTO s_ugyfel
+SELECT * FROM hajo.s_ugyfel
+WHERE helyseg IN (SELECT helyseg_id FROM hajo.s_helyseg WHERE orszag = 'Olaszország');
+
+SELECT * FROM s_helyseg;
+
+-------------------- 54 feladat --------------------
+INSERT INTO s_hajo (hajo_id, nev, netto_suly, max_kontener_dbszam, max_sulyterheles, hajo_tipus)
+SELECT hajo_id, h.nev, netto_suly, max_kontener_dbszam, max_sulyterheles, hajo_tipus FROM hajo.s_hajo h
+INNER JOIN hajo.s_hajo_tipus ht ON h.hajo_tipus = ht.hajo_tipus_id
+WHERE h.netto_suly >= 250 AND ht.nev = 'Small feeder';
+
+-------------------- 57 feladat --------------------HIBA
+DELETE FROM s_kikoto
+WHERE kikoto_id IN (
+    SELECT kikoto_id
+    FROM s_kikoto k
+    JOIN s_helyseg h ON k.helyseg = h.helyseg_id
+    WHERE h.orszag IN ('Olaszorszag', 'Líbia')
+    AND k.leiras LIKE '%szárazdokk%'
+);
+
+SELECT * FROM s_kikoto k INNER JOIN s_helyseg h ON k.helyseg = h.helyseg_id
+WHERE orszag LIKE 'Olaszország' OR orszag LIKE 'Líbia' AND leiras LIKE '%szárazdokk%';
+
+-------------------- 61 feladat --------------------HIBA
+UPDATE (
+  SELECT k.leiras, h.helysegnev
+  FROM s_kikoto k
+  INNER JOIN s_helyseg h ON k.helyseg = h.helyseg_id
+  WHERE k.leiras LIKE '%terminálterület: nagy,%'
+)t
+SET t.leiras = t.helysegnev || ', ' || t.leiras;
+
+-------------------- 68 feladat --------------------HIBA
+UPDATE (
+    SELECT h.lakossag FROM s_helyseg h INNER JOIN s_orszag o ON h.orszag = o.orszag
+    WHERE o.foldresz = 'Ázsia'
+)t
+SET t.lakossag = t.lakossag * 1.05;
+
+-------------------- 76 feladat --------------------
+CREATE VIEW hajotipus_ut AS
+SELECT hajo_tipus, ht.nev, COUNT(u.ut_id) AS teljesitett_utak FROM s_hajo h
+RIGHT JOIN s_hajo_tipus ht ON h.hajo_tipus = ht.hajo_tipus_id
+LEFT JOIN s_ut u ON h.hajo_id = u.hajo
+GROUP BY hajo_tipus, ht.nev
+ORDER BY hajo_tipus;
+
+DROP VIEW hajotipus_ut;
+
+-------------------- 76 feladat --------------------
+CREATE VIEW kikoto_telefonszamok AS
+SELECT k.kikoto_id, h.helysegnev, h.orszag, COUNT(t.telefon) AS telefonszamok_szama
+FROM s_kikoto k
+LEFT JOIN s_kikoto_telefon t ON k.kikoto_id = t.kikoto_id
+INNER JOIN s_helyseg h ON k.helyseg = h.helyseg_id
+GROUP BY k.kikoto_id, h.helysegnev, h.orszag;
+
+DROP VIEW kikoto_telefonszamok;
+
+-------------------- 83 feladat --------------------
+
+
+-------------------- 83 feladat --------------------
+CREATE VIEW legnagyobb_osszsuly AS
+SELECT DISTINCT k.kikoto_id, h.helysegnev, h.orszag, suly FROM (
+    SELECT megrendeles, SUM(rakomanysuly) suly FROM s_hozzarendel
+    GROUP BY megrendeles
+    ORDER BY SUM(rakomanysuly) DESC
+) rksuly
+INNER JOIN s_szallit sz ON rksuly.megrendeles = sz.megrendeles
+INNER JOIN s_ut u ON u.ut_id = sz.ut
+INNER JOIN s_kikoto k ON k.kikoto_id = u.indulasi_kikoto
+INNER JOIN s_helyseg h ON h.helyseg_id = k.helyseg
+ORDER BY suly DESC
+FETCH FIRST 1 ROWS WITH TIES;
+
+DROP VIEW legnagyobb_osszsuly;
+
+-------------------- 92 feladat --------------------
+GRANT REFERENCES ON s_ut TO panovics;
+
+-------------------- 94 feladat --------------------
+GRANT UPDATE (vezeteknev, keresztnev) ON s_ugyfel TO panovics;
+
+-------------------- 96 feladat --------------------
+REVOKE SELECT ON s_ut FROM panovics;
+
+GRANT SELECT on s_ut TO panovics;
+
+-------------------- 96 feladat --------------------
+REVOKE DELETE, UPDATE ON s_kikoto FROM panovics;
+
+GRANT DELETE, UPDATE ON s_kikoto TO panovics;
+
+-------------------- 96 feladat --------------------
+REVOKE DELETE ON s_orszag FROM panovics;
+
+GRANT DELETE ON s_orszag TO panovics;
+
+-------------------- 100 feladat --------------------
+REVOKE INSERT ON s_megrendeles FROM public;
